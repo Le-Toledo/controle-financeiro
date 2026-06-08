@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "FinCasal",
+    "slug": "fincasal",
+    "version": "1.0.0",
+    "scheme": "fincasal",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#080D1A",
+          "imageWidth": 200
+        }
+      ],
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.fincasal.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#080D1A"
+      },
+      "package": "com.fincasal.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "firebaseApiKey": "EXPO_PUBLIC_FIREBASE_API_KEY",
+      "firebaseAuthDomain": "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN",
+      "firebaseProjectId": "EXPO_PUBLIC_FIREBASE_PROJECT_ID",
+      "firebaseStorageBucket": "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET",
+      "firebaseMessagingSenderId": "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+      "firebaseAppId": "EXPO_PUBLIC_FIREBASE_APP_ID",
+      "router": {},
+      "eas": {
+        "projectId": "00e3a08a-f965-4ed7-9167-ca199816d412"
+      }
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "indexes": [
+
+    // ── transactions ──────────────────────────────────────────────────────────
+    // useTransactions: where(date >= start), where(date <= end), orderBy(date desc)
+    // → campo único 'date' é coberto pelo auto-index do Firestore (sem composto necessário)
+
+    // Relatório: filtro por type + janela de mês
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type",   "order": "ASCENDING"  },
+        { "fieldPath": "date",   "order": "DESCENDING" }
+      ]
+    },
+
+    // Relatório: filtro por categoria + janela de mês
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "categoryId", "order": "ASCENDING"  },
+        { "fieldPath": "date",       "order": "DESCENDING" }
+      ]
+    },
+
+    // Relatório: filtro por autor + janela de mês
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorId", "order": "ASCENDING"  },
+        { "fieldPath": "date",     "order": "DESCENDING" }
+      ]
+    },
+
+    // Cloud Function: idempotência na geração de fixedExpenses
+    // where(source == 'fixed'), where(fixedExpenseId == id), orderBy(date desc)
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "source",         "order": "ASCENDING"  },
+        { "fieldPath": "fixedExpenseId", "order": "ASCENDING"  },
+        { "fieldPath": "date",           "order": "DESCENDING" }
+      ]
+    },
+
+    // ── categories ────────────────────────────────────────────────────────────
+    // useCategories: orderBy('type'), orderBy('name')
+    {
+      "collectionGroup": "categories",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    },
+
+    // ── fixedExpenses ─────────────────────────────────────────────────────────
+    // useFixedExpenses: where('active', '==', true), orderBy('dueDay', 'asc')
+    {
+      "collectionGroup": "fixedExpenses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "active", "order": "ASCENDING" },
+        { "fieldPath": "dueDay", "order": "ASCENDING" }
+      ]
+    }
+
+  ],
+  "fieldOverrides": []
+}

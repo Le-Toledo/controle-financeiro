@@ -1,0 +1,53 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBs1VJmD4iNWyPah8FD7Q2bfprVAiodto8",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "financasal-65f2b.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "financasal-65f2b",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "financasal-65f2b.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "694597252598",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:694597252598:web:ad82bafd7a94998880c3d7"
+      }
+    },
+    "development:simulator": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBs1VJmD4iNWyPah8FD7Q2bfprVAiodto8",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "financasal-65f2b.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "financasal-65f2b",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "financasal-65f2b.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "694597252598",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:694597252598:web:ad82bafd7a94998880c3d7"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
