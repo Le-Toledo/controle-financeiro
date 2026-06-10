@@ -13,11 +13,11 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size    = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
-  style?: ViewStyle;
-  variant?: Variant;
-  size?:    Size;
-  loading?: boolean;
-  label:    string;
+  style?:     ViewStyle;
+  variant?:   Variant;
+  size?:      Size;
+  loading?:   boolean;
+  label:      string;
   fullWidth?: boolean;
 }
 
@@ -51,7 +51,10 @@ export function Button({
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'ghost' ? Colors.primary : '#fff'} size="small" />
+        <ActivityIndicator
+          color={variant === 'ghost' ? Colors.primary : '#FFFFFF'}
+          size="small"
+        />
       ) : (
         <Text style={[styles.label, styles[`label_${variant}`], styles[`labelSize_${size}`]]}>
           {label}
@@ -67,43 +70,53 @@ const styles = StyleSheet.create({
     alignItems:     'center',
     justifyContent: 'center',
     borderRadius:   Radius.md,
-    minHeight:      44, // acessibilidade — toque mínimo
+    minHeight:      44,
   },
   fullWidth: { width: '100%' },
-  disabled:  { opacity: 0.5 },
+  disabled:  { opacity: 0.45 },
 
   // Variantes
   primary: {
     backgroundColor: Colors.primary,
+    shadowColor:     Colors.primary,
+    shadowOffset:    { width: 0, height: 4 },
+    shadowOpacity:   0.35,
+    shadowRadius:    10,
+    elevation:       6,
   },
   secondary: {
     backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth:     1,
+    borderColor:     Colors.border,
   },
   ghost: {
     backgroundColor: 'transparent',
   },
   danger: {
     backgroundColor: Colors.negative,
+    shadowColor:     Colors.negative,
+    shadowOffset:    { width: 0, height: 4 },
+    shadowOpacity:   0.3,
+    shadowRadius:    8,
+    elevation:       4,
   },
 
   // Tamanhos
-  size_sm: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
-  size_md: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm + 4 },
-  size_lg: { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
+  size_sm: { paddingHorizontal: Spacing.md,  paddingVertical: Spacing.xs,      borderRadius: Radius.sm },
+  size_md: { paddingHorizontal: Spacing.lg,  paddingVertical: Spacing.sm + 4,  borderRadius: Radius.md },
+  size_lg: { paddingHorizontal: Spacing.xl,  paddingVertical: Spacing.md,      borderRadius: Radius.lg },
 
   // Labels
   label: {
-    fontWeight: FontWeight.semibold,
-    letterSpacing: 0.2,
+    fontWeight:    FontWeight.semibold,
+    letterSpacing: 0.3,
   },
-  label_primary:   { color: '#0A0D14' },
+  label_primary:   { color: '#FFFFFF' },
   label_secondary: { color: Colors.textPrimary },
   label_ghost:     { color: Colors.primary },
   label_danger:    { color: '#fff' },
 
-  labelSize_sm:   { fontSize: FontSize.sm },
-  labelSize_md:   { fontSize: FontSize.base },
-  labelSize_lg:   { fontSize: FontSize.lg },
+  labelSize_sm: { fontSize: FontSize.sm },
+  labelSize_md: { fontSize: FontSize.base },
+  labelSize_lg: { fontSize: FontSize.lg },
 });

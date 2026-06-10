@@ -6,14 +6,15 @@ import {
   View,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Radius, Spacing } from '@/theme';
 import type { Category, CategoryType } from '@shared/types/category';
 
 interface CategoryPickerProps {
-  categories:  Category[];
-  selectedId:  string | null;
-  type:        CategoryType;
-  onSelect:    (category: Category) => void;
+  categories: Category[];
+  selectedId: string | null;
+  type:       CategoryType;
+  onSelect:   (category: Category) => void;
 }
 
 export function CategoryPicker({ categories, selectedId, type, onSelect }: CategoryPickerProps) {
@@ -27,6 +28,7 @@ export function CategoryPicker({ categories, selectedId, type, onSelect }: Categ
     >
       {filtered.map((cat) => {
         const selected = cat.id === selectedId;
+        const accent   = cat.color ?? Colors.primary;
         return (
           <TouchableOpacity
             key={cat.id}
@@ -37,13 +39,19 @@ export function CategoryPicker({ categories, selectedId, type, onSelect }: Categ
             accessibilityState={{ selected }}
             style={[
               styles.chip,
-              selected && { backgroundColor: cat.color + '22', borderColor: cat.color },
+              selected && {
+                backgroundColor: accent + '1E',
+                borderColor:     accent + 'AA',
+              },
             ]}
           >
             <Text style={styles.icon}>{cat.icon}</Text>
-            <Text style={[styles.label, selected && { color: cat.color }]}>
+            <Text style={[styles.label, selected && { color: accent, fontWeight: FontWeight.semibold }]}>
               {cat.name}
             </Text>
+            {selected && (
+              <Ionicons name="checkmark-circle" size={14} color={accent} style={styles.check} />
+            )}
           </TouchableOpacity>
         );
       })}
@@ -55,16 +63,16 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: Spacing.lg, gap: Spacing.sm, flexDirection: 'row' },
 
   chip: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    gap:            6,
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               6,
     paddingHorizontal: Spacing.md,
     paddingVertical:   10,
-    borderRadius:   Radius.full,
-    backgroundColor: Colors.card,
-    borderWidth:    1,
-    borderColor:    Colors.border,
-    minHeight:      44,
+    borderRadius:      Radius.full,
+    backgroundColor:   Colors.card,
+    borderWidth:       1,
+    borderColor:       Colors.border,
+    minHeight:         44,
   },
 
   icon:  { fontSize: 16 },
@@ -73,4 +81,5 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
     color:      Colors.textSecondary,
   },
+  check: { marginLeft: 2 },
 });

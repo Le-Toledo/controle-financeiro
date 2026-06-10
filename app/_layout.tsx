@@ -63,7 +63,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <StatusBar style="light" />
+          <StatusBar style="light" backgroundColor={Colors.bg} />
           <AuthGate />
         </QueryClientProvider>
       </SafeAreaProvider>

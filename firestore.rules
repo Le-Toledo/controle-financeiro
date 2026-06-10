@@ -87,15 +87,12 @@ service cloud.firestore {
         allow read: if isMember(familyId);
 
         allow create: if isMember(familyId)
-          && isValidCents(request.resource.data.amountCents)
-          && request.resource.data.dueDay >= 1
-          && request.resource.data.dueDay <= 28;
+          && isValidCents(request.resource.data.amountCents);
 
         allow update: if isMember(familyId)
           && isValidCents(request.resource.data.amountCents);
 
-        // Só o dono exclui; prefira active=false para manter histórico
-        allow delete: if isOwner(familyId);
+        allow delete: if isMember(familyId);
       }
 
       // ── /transactions/{transactionId} ───────────────────────────────────
@@ -106,8 +103,15 @@ service cloud.firestore {
         allow create: if isMember(familyId)
           && request.auth.uid == request.resource.data.authorId
           && isValidCents(request.resource.data.amountCents)
-          // Transações 'fixed' são geradas exclusivamente pela Cloud Function
-          && request.resource.data.source == 'manual';
+          && (
+            request.resource.data.source == 'manual'
+            || (
+              // Materialização client-side de gastos fixos
+              request.resource.data.source == 'fixed'
+              && request.resource.data.fixedExpenseId is string
+              && exists(/databases/$(database)/documents/families/$(familyId)/fixedExpenses/$(request.resource.data.fixedExpenseId))
+            )
+          );
 
         // Só o autor edita; source e fixedExpenseId são imutáveis
         allow update: if isMember(familyId)
@@ -115,9 +119,8 @@ service cloud.firestore {
           && request.resource.data.source == resource.data.source
           && request.resource.data.fixedExpenseId == resource.data.fixedExpenseId;
 
-        // Só o autor deleta
-        allow delete: if isMember(familyId)
-          && resource.data.authorId == request.auth.uid;
+        // Qualquer membro da família pode deletar — necessário para excluirFixed (batch)
+        allow delete: if isMember(familyId);
       }
 
       // ── /monthlyReports/{reportId} ──────────────────────────────────────

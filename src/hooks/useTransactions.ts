@@ -23,7 +23,12 @@ export function useTransactions(month: Date): UseTransactionsResult {
   const [loading, setLoading]           = useState(true);
 
   useEffect(() => {
-    if (!familyId) return;
+    if (!familyId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
 
     const { start, end } = getMonthRange(month);
     const q = query(
@@ -33,10 +38,17 @@ export function useTransactions(month: Date): UseTransactionsResult {
       orderBy('date', 'desc'),
     );
 
-    const unsub = onSnapshot(q, (snap) => {
-      setTransactions(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
-      setLoading(false);
-    });
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        setTransactions(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+        setLoading(false);
+      },
+      (err) => {
+        console.error('[useTransactions] snapshot error:', err.code, err.message);
+        setLoading(false);
+      },
+    );
 
     return () => unsub();
   }, [familyId, month.getFullYear(), month.getMonth()]);

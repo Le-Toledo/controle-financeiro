@@ -59,13 +59,13 @@
     },
 
     // ── fixedExpenses ─────────────────────────────────────────────────────────
-    // useFixedExpenses: where('active', '==', true), orderBy('dueDay', 'asc')
+    // useFixedExpenses: where('active', '==', true), orderBy('startDate', 'asc')
     {
       "collectionGroup": "fixedExpenses",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "active", "order": "ASCENDING" },
-        { "fieldPath": "dueDay", "order": "ASCENDING" }
+        { "fieldPath": "active",    "order": "ASCENDING" },
+        { "fieldPath": "startDate", "order": "ASCENDING" }
       ]
     }
 

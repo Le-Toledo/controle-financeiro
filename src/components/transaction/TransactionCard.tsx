@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors, FontSize, FontWeight, Radius, Spacing } from '@/theme';
 import { formatCents } from '@/utils/currency';
 import { formatTime } from '@/utils/date';
@@ -9,15 +9,16 @@ import type { Category } from '@shared/types/category';
 interface TransactionCardProps {
   transaction: Transaction;
   category?:   Category;
+  onPress?:    () => void;
 }
 
-export function TransactionCard({ transaction, category }: TransactionCardProps) {
+export function TransactionCard({ transaction, category, onPress }: TransactionCardProps) {
   const isExpense = transaction.type === 'expense';
   const sign      = isExpense ? '−' : '+';
   const color     = isExpense ? Colors.negative : Colors.positive;
 
-  return (
-    <View style={styles.card}>
+  const inner = (
+    <>
       {/* Ícone da categoria */}
       <View style={[styles.iconBadge, { backgroundColor: (category?.color ?? Colors.border) + '22' }]}>
         <Text style={styles.icon}>{category?.icon ?? '📦'}</Text>
@@ -44,23 +45,39 @@ export function TransactionCard({ transaction, category }: TransactionCardProps)
           {formatTime(transaction.date.toDate())}
         </Text>
       </View>
-    </View>
+    </>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={onPress}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel={`${category?.name ?? 'Lançamento'}, ${sign} ${formatCents(transaction.amountCents)}`}
+      >
+        {inner}
+      </TouchableOpacity>
+    );
+  }
+
+  return <View style={styles.card}>{inner}</View>;
 }
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           Spacing.md,
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             Spacing.md,
     paddingVertical: Spacing.sm + 2,
   },
 
   iconBadge: {
-    width:        44,
-    height:       44,
-    borderRadius: Radius.md,
-    alignItems:   'center',
+    width:          44,
+    height:         44,
+    borderRadius:   Radius.md,
+    alignItems:     'center',
     justifyContent: 'center',
   },
   icon: { fontSize: 20 },

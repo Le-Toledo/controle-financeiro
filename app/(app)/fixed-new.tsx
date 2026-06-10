@@ -1,77 +1,154 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert, Platform,
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import {
+  addDoc, updateDoc, doc, getDoc,
+  serverTimestamp, Timestamp,
+} from 'firebase/firestore';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { auth } from '@/lib/firebase';
-import { fixedExpensesCol }  from '@/lib/firestore.refs';
-import { useAuthStore }      from '@/stores/auth.store';
-import { useCategories }     from '@/hooks/useCategories';
-import { AmountKeypad }      from '@/components/ui/AmountKeypad';
-import { CategoryPicker }    from '@/components/ui/CategoryPicker';
-import { Button }            from '@/components/ui/Button';
-import { Input }             from '@/components/ui/Input';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { auth, db } from '@/lib/firebase';
+import { fixedExpensesCol } from '@/lib/firestore.refs';
+import { useAuthStore }   from '@/stores/auth.store';
+import { useCategories }  from '@/hooks/useCategories';
+import { AmountKeypad }   from '@/components/ui/AmountKeypad';
+import { CategoryPicker } from '@/components/ui/CategoryPicker';
+import { SkeletonBox }    from '@/components/ui/SkeletonBox';
+import { Button }         from '@/components/ui/Button';
+import { Input }          from '@/components/ui/Input';
 import { Colors, FontSize, FontWeight, Radius, Spacing } from '@/theme';
-import { digitsToCents }     from '@/utils/currency';
+import { digitsToCents }  from '@/utils/currency';
 import { CreateFixedExpenseSchema, type CreateFixedExpenseInput } from '@shared/schemas/fixed-expense.schema';
 import type { Category } from '@shared/types/category';
 
-interface Props {
-  onClose: () => void;
+// ── Skeleton de edição ────────────────────────────────────────────────────────
+function EditLoadingSkeleton() {
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <SkeletonBox width={32} height={32} borderRadius={Radius.sm} />
+        <SkeletonBox width={160} height={18} />
+        <View style={{ width: 32 }} />
+      </View>
+      <View style={sk.body}>
+        {/* Nome da conta skeleton */}
+        <View style={sk.section}>
+          <SkeletonBox width={100} height={10} />
+          <SkeletonBox height={48} borderRadius={Radius.md} />
+        </View>
+        {/* Keypad skeleton */}
+        <SkeletonBox height={88} borderRadius={Radius.lg} />
+        {/* Data skeleton */}
+        <View style={sk.section}>
+          <SkeletonBox width={120} height={10} />
+          <SkeletonBox height={48} borderRadius={Radius.md} />
+        </View>
+        {/* Categoria skeleton */}
+        <View style={sk.section}>
+          <SkeletonBox width={80} height={10} />
+          <View style={sk.chips}>
+            {[88, 104, 80, 112].map((w, i) => (
+              <SkeletonBox key={i} width={w} height={44} borderRadius={Radius.full} />
+            ))}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
 }
 
-export default function NewFixedExpenseSheet({ onClose }: Props) {
+const sk = StyleSheet.create({
+  body:    { flex: 1, padding: Spacing.lg, gap: Spacing.lg },
+  section: { gap: Spacing.sm },
+  chips:   { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
+});
+
+// ── Tela ─────────────────────────────────────────────────────────────────────
+export default function FixedExpenseFormScreen() {
+  const router   = useRouter();
+  const { id }   = useLocalSearchParams<{ id?: string }>();
+  const isEditing = Boolean(id);
+
   const familyId = useAuthStore((s) => s.family?.id);
-  const { categories } = useCategories();
+  const { categories, loading: catLoading } = useCategories();
 
-  const [digits,         setDigits]         = useState('');
-  const [category,       setCategory]       = useState<Category | null>(null);
-  const [saving,         setSaving]         = useState(false);
-  const [startDate,      setStartDate]      = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [digits,            setDigits]           = useState('');
+  const [category,          setCategory]         = useState<Category | null>(null);
+  const [saving,            setSaving]           = useState(false);
+  const [startDate,         setStartDate]        = useState(new Date());
+  const [showDatePicker,    setShowDatePicker]   = useState(false);
+  const [loadingEdit,       setLoadingEdit]      = useState(isEditing);
+  const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<CreateFixedExpenseInput>({
+  const { control, handleSubmit, formState: { errors }, reset } = useForm<CreateFixedExpenseInput>({
     resolver: zodResolver(CreateFixedExpenseSchema),
-    defaultValues: { label: '', dueDay: 5, responsibleUserId: auth.currentUser?.uid ?? '' },
+    defaultValues: { label: '', responsibleUserId: auth.currentUser?.uid ?? '' },
   });
 
-  function onDateChange(_event: DateTimePickerEvent, selectedDate?: Date) {
+  useEffect(() => {
+    if (!pendingCategoryId || categories.length === 0) return;
+    const cat = categories.find((c) => c.id === pendingCategoryId);
+    if (cat) { setCategory(cat); setPendingCategoryId(null); }
+  }, [pendingCategoryId, categories]);
+
+  useEffect(() => {
+    if (!id || !familyId) return;
+    setLoadingEdit(true);
+    getDoc(doc(db, 'families', familyId, 'fixedExpenses', id))
+      .then((snap) => {
+        if (!snap.exists()) { router.back(); return; }
+        const data = snap.data();
+        reset({ label: data.label, responsibleUserId: data.responsibleUserId });
+        setDigits(String(data.amountCents));
+        setStartDate(data.startDate.toDate());
+        setPendingCategoryId(data.categoryId);
+      })
+      .catch(() => router.back())
+      .finally(() => setLoadingEdit(false));
+  }, [id, familyId]);
+
+  function onDateChange(event: DateTimePickerEvent, selectedDate?: Date) {
     if (Platform.OS === 'android') setShowDatePicker(false);
-    if (selectedDate) setStartDate(selectedDate);
+    if (event.type === 'set' && selectedDate) setStartDate(selectedDate);
   }
 
   async function onSubmit(data: CreateFixedExpenseInput) {
     if (!familyId) return;
     const cents = digitsToCents(digits);
-    if (cents <= 0) {
-      Alert.alert('Valor inválido', 'Digite um valor maior que zero.');
-      return;
-    }
-    if (!category) {
-      Alert.alert('Categoria', 'Selecione uma categoria.');
-      return;
-    }
+    if (cents <= 0) { Alert.alert('Valor inválido', 'Digite um valor maior que zero.'); return; }
+    if (!category)  { Alert.alert('Categoria', 'Selecione uma categoria.'); return; }
 
     setSaving(true);
     try {
-      await addDoc(fixedExpensesCol(familyId), {
-        label:             data.label.trim(),
-        amountCents:       cents,
-        dueDay:            Number(data.dueDay),
-        categoryId:        category.id,
-        responsibleUserId: auth.currentUser!.uid,
-        active:            true,
-        startDate:         Timestamp.fromDate(startDate),
-        createdAt:         serverTimestamp(),
-        updatedAt:         serverTimestamp(),
-      } as Parameters<typeof addDoc>[1]);
-      onClose();
+      if (isEditing && id) {
+        await updateDoc(doc(db, 'families', familyId, 'fixedExpenses', id), {
+          label:             data.label.trim(),
+          amountCents:       cents,
+          categoryId:        category.id,
+          responsibleUserId: auth.currentUser!.uid,
+          startDate:         Timestamp.fromDate(startDate),
+          updatedAt:         serverTimestamp(),
+        });
+      } else {
+        await addDoc(fixedExpensesCol(familyId), {
+          label:             data.label.trim(),
+          amountCents:       cents,
+          categoryId:        category.id,
+          responsibleUserId: auth.currentUser!.uid,
+          active:            true,
+          startDate:         Timestamp.fromDate(startDate),
+          createdAt:         serverTimestamp(),
+          updatedAt:         serverTimestamp(),
+        } as Parameters<typeof addDoc>[1]);
+      }
+      router.back();
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? 'desconhecido';
       console.error('[FixedNew] erro ao salvar:', code, err);
@@ -81,19 +158,32 @@ export default function NewFixedExpenseSheet({ onClose }: Props) {
     }
   }
 
+  if (loadingEdit) return <EditLoadingSkeleton />;
+
   return (
     <View style={styles.container}>
-      {/* Header */}
+
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Text style={styles.closeBtn}>✕</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.headerBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityLabel="Fechar"
+        >
+          <Ionicons name="close" size={22} color={Colors.textMuted} />
         </TouchableOpacity>
-        <Text style={styles.title}>Novo gasto fixo</Text>
-        <View style={{ width: 32 }} />
+
+        <Text style={styles.title}>
+          {isEditing ? 'Editar gasto fixo' : 'Novo gasto fixo'}
+        </Text>
+
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Nome */}
+
+        {/* ── Nome da conta ── */}
         <View style={styles.fieldPad}>
           <Controller
             control={control}
@@ -112,43 +202,26 @@ export default function NewFixedExpenseSheet({ onClose }: Props) {
           />
         </View>
 
-        {/* Valor */}
+        {/* ── Valor ── */}
         <AmountKeypad digits={digits} onChange={setDigits} />
 
-        {/* Dia de vencimento */}
-        <View style={styles.fieldPad}>
-          <Controller
-            control={control}
-            name="dueDay"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Dia de vencimento (1–28)"
-                placeholder="5"
-                keyboardType="number-pad"
-                maxLength={2}
-                onChangeText={(t) => onChange(parseInt(t) || 1)}
-                onBlur={onBlur}
-                value={value ? String(value) : ''}
-                error={errors.dueDay?.message}
-                helper="Use até dia 28 para funcionar em fevereiro"
-              />
-            )}
-          />
-        </View>
-
-        {/* Data de início */}
+        {/* ── Data de início ── */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Início da cobrança</Text>
           <TouchableOpacity
             style={styles.dateRow}
             onPress={() => setShowDatePicker((prev) => !prev)}
-            accessibilityLabel={`Data de início: ${format(startDate, 'dd/MM/yyyy', { locale: ptBR })}`}
+            accessibilityLabel={`Data de início: ${format(startDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`}
           >
-            <Text style={styles.dateIcon}>📅</Text>
+            <Ionicons name="calendar-outline" size={18} color={Colors.textMuted} />
             <Text style={styles.dateValue}>
-              {format(startDate, 'dd/MM/yyyy', { locale: ptBR })}
+              {format(startDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
             </Text>
-            <Text style={styles.dateChevron}>{showDatePicker ? '▲' : '▼'}</Text>
+            <Ionicons
+              name={showDatePicker ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={Colors.textMuted}
+            />
           </TouchableOpacity>
 
           {showDatePicker && (
@@ -156,7 +229,7 @@ export default function NewFixedExpenseSheet({ onClose }: Props) {
               <DateTimePicker
                 value={startDate}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="spinner"
                 onChange={onDateChange}
                 locale="pt-BR"
               />
@@ -173,86 +246,134 @@ export default function NewFixedExpenseSheet({ onClose }: Props) {
           )}
         </View>
 
-        {/* Categoria (só expense) */}
+        {/* ── Categoria ── */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Categoria</Text>
-          <CategoryPicker
-            categories={categories}
-            selectedId={category?.id ?? null}
-            type="expense"
-            onSelect={setCategory}
-          />
+          {catLoading ? (
+            <View style={styles.catSkeleton}>
+              {[88, 104, 80, 112].map((w, i) => (
+                <SkeletonBox key={i} width={w} height={44} borderRadius={Radius.full} />
+              ))}
+            </View>
+          ) : (
+            <CategoryPicker
+              categories={categories}
+              selectedId={category?.id ?? null}
+              type="expense"
+              onSelect={setCategory}
+            />
+          )}
         </View>
 
-        <View style={styles.fieldPad}>
+        {/* ── Salvar ── */}
+        <View style={styles.saveSection}>
           <Button
-            label="Salvar gasto fixo"
+            label={isEditing ? 'Salvar alterações' : 'Salvar gasto fixo'}
             loading={saving}
             onPress={handleSubmit(onSubmit)}
             size="lg"
           />
         </View>
+
       </ScrollView>
     </View>
   );
 }
 
+// ── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex:            1,
-    backgroundColor: Colors.surface,
-  },
+  container: { flex: 1, backgroundColor: Colors.surface },
+
+  // Header
   header: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    justifyContent:  'space-between',
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
+    paddingVertical:   Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  closeBtn: { fontSize: FontSize.lg, color: Colors.textMuted, width: 32, textAlign: 'center' },
-  title:    { fontSize: FontSize.lg, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
+  headerBtn: {
+    width:           44,
+    height:          44,
+    alignItems:      'center',
+    justifyContent:  'center',
+    borderRadius:    Radius.sm,
+  },
+  title: {
+    fontSize:   FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    color:      Colors.textPrimary,
+  },
 
   fieldPad: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg },
 
-  section:      { marginTop: Spacing.lg },
+  // Seções
+  section: { marginTop: Spacing.lg },
   sectionLabel: {
-    fontSize:   FontSize.sm,
-    fontWeight: FontWeight.medium,
-    color:      Colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize:          FontSize.xs,
+    fontWeight:        FontWeight.semibold,
+    color:             Colors.textMuted,
+    textTransform:     'uppercase',
+    letterSpacing:     1.5,
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
+    marginBottom:      Spacing.sm,
   },
 
-  dateRow: {
-    flexDirection: 'row', alignItems: 'center',
-    marginHorizontal: Spacing.lg,
-    backgroundColor: Colors.card,
-    borderRadius: Radius.md,
-    borderWidth: 1, borderColor: Colors.border,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm + 2,
-    gap: Spacing.sm,
+  // Skeleton de categorias
+  catSkeleton: {
+    flexDirection:     'row',
+    paddingHorizontal: Spacing.lg,
+    gap:               Spacing.sm,
   },
-  dateIcon:    { fontSize: FontSize.base },
-  dateValue:   { flex: 1, fontSize: FontSize.base, color: Colors.textPrimary, fontWeight: FontWeight.medium },
-  dateChevron: { fontSize: FontSize.xs, color: Colors.textMuted },
+
+  // Date row
+  dateRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    marginHorizontal:  Spacing.lg,
+    backgroundColor:   Colors.card,
+    borderRadius:      Radius.md,
+    borderWidth:       1,
+    borderColor:       Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical:   Spacing.sm + 4,
+    gap:               Spacing.sm,
+    minHeight:         48,
+  },
+  dateValue: {
+    flex:       1,
+    fontSize:   FontSize.base,
+    color:      Colors.textPrimary,
+    fontWeight: FontWeight.medium,
+  },
 
   pickerWrap: {
     marginHorizontal: Spacing.lg,
-    marginTop: Spacing.sm,
-    backgroundColor: Colors.card,
-    borderRadius: Radius.md,
-    borderWidth: 1, borderColor: Colors.border,
-    overflow: 'hidden',
+    marginTop:        Spacing.sm,
+    backgroundColor:  Colors.card,
+    borderRadius:     Radius.md,
+    borderWidth:      1,
+    borderColor:      Colors.border,
+    overflow:         'hidden',
   },
   doneBtn: {
-    alignItems: 'flex-end',
+    alignItems:        'flex-end',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderTopWidth: 1, borderTopColor: Colors.border,
+    paddingVertical:   Spacing.sm,
+    borderTopWidth:    1,
+    borderTopColor:    Colors.border,
   },
-  doneBtnText: { color: Colors.primary, fontWeight: FontWeight.semibold, fontSize: FontSize.base },
+  doneBtnText: {
+    color:      Colors.primary,
+    fontWeight: FontWeight.semibold,
+    fontSize:   FontSize.base,
+  },
+
+  saveSection: {
+    marginHorizontal: Spacing.lg,
+    marginTop:        Spacing.lg,
+    marginBottom:     Spacing.xxl,
+  },
 });

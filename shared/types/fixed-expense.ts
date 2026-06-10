@@ -4,7 +4,6 @@ export interface FixedExpense {
   id: string;
   label: string;
   amountCents: number;          // Inteiro em centavos
-  dueDay: number;               // 1–28 (28 = seguro para fevereiro)
   categoryId: string;
   responsibleUserId: string;    // Quem paga esta conta
   active: boolean;

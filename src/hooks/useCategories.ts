@@ -15,13 +15,24 @@ export function useCategories(): UseCategoriesResult {
   const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
-    if (!familyId) return;
+    if (!familyId) {
+      setLoading(false);
+      return;
+    }
 
     const q = query(categoriesCol(familyId), orderBy('type'), orderBy('name'));
-    const unsub = onSnapshot(q, (snap) => {
-      setCategories(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
-      setLoading(false);
-    });
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        setCategories(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+        setLoading(false);
+      },
+      (err) => {
+        console.error('[useCategories] snapshot error:', err.code, err.message);
+        setLoading(false);
+      },
+    );
 
     return () => unsub();
   }, [familyId]);
