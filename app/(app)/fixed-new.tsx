@@ -3,19 +3,20 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert, Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
   addDoc, updateDoc, doc, getDoc,
   serverTimestamp, Timestamp,
 } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '@/lib/firebase';
-import { fixedExpensesCol } from '@/lib/firestore.refs';
+import { fixedExpensesCol, transactionsCol } from '@/lib/firestore.refs';
 import { useAuthStore }   from '@/stores/auth.store';
 import { useCategories }  from '@/hooks/useCategories';
 import { AmountKeypad }   from '@/components/ui/AmountKeypad';
@@ -31,7 +32,7 @@ import type { Category } from '@shared/types/category';
 // ── Skeleton de edição ────────────────────────────────────────────────────────
 function EditLoadingSkeleton() {
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <SkeletonBox width={32} height={32} borderRadius={Radius.sm} />
         <SkeletonBox width={160} height={18} />
@@ -60,7 +61,7 @@ function EditLoadingSkeleton() {
           </View>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -137,17 +138,42 @@ export default function FixedExpenseFormScreen() {
           updatedAt:         serverTimestamp(),
         });
       } else {
-        await addDoc(fixedExpensesCol(familyId), {
+        const uid = auth.currentUser!.uid;
+        const feRef = await addDoc(fixedExpensesCol(familyId), {
           label:             data.label.trim(),
           amountCents:       cents,
           categoryId:        category.id,
-          responsibleUserId: auth.currentUser!.uid,
+          responsibleUserId: uid,
           active:            true,
           startDate:         Timestamp.fromDate(startDate),
           createdAt:         serverTimestamp(),
           updatedAt:         serverTimestamp(),
         } as Parameters<typeof addDoc>[1]);
+
+        // Create the transaction for the current month immediately so it appears
+        // in the Home and Report screens without waiting for a component remount.
+        const now      = new Date();
+        const monthEnd = endOfMonth(now);
+        if (startDate <= monthEnd) {
+          await addDoc(transactionsCol(familyId), {
+            amountCents:    cents,
+            type:           'expense' as const,
+            categoryId:     category.id,
+            note:           data.label.trim(),
+            authorId:       uid,
+            date:           Timestamp.fromDate(new Date()),
+            source:         'fixed' as const,
+            fixedExpenseId: feRef.id,
+            createdAt:      serverTimestamp(),
+            updatedAt:      serverTimestamp(),
+          } as Parameters<typeof addDoc>[1]);
+        }
       }
+      setDigits('');
+      reset({ label: '', responsibleUserId: auth.currentUser?.uid ?? '' });
+      setCategory(null);
+      setStartDate(new Date());
+      setShowDatePicker(false);
       router.back();
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? 'desconhecido';
@@ -161,7 +187,7 @@ export default function FixedExpenseFormScreen() {
   if (loadingEdit) return <EditLoadingSkeleton />;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
 
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -276,7 +302,7 @@ export default function FixedExpenseFormScreen() {
         </View>
 
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

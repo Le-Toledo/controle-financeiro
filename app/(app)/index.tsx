@@ -8,10 +8,9 @@ import { doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '@/lib/firebase';
 import { useAuthStore }    from '@/stores/auth.store';
-import { useTransactions }     from '@/hooks/useTransactions';
-import { useCategories }       from '@/hooks/useCategories';
-import { useFixedExpenses }    from '@/hooks/useFixedExpenses';
-import { useMaterializeFixed } from '@/hooks/useMaterializeFixed';
+import { useTransactions }  from '@/hooks/useTransactions';
+import { useCategories }    from '@/hooks/useCategories';
+import { useFixedExpenses } from '@/hooks/useFixedExpenses';
 import { ScreenWrapper }   from '@/components/ui/ScreenWrapper';
 import { SkeletonBox }     from '@/components/ui/SkeletonBox';
 import { MonthSummary }    from '@/components/transaction/MonthSummary';
@@ -49,11 +48,9 @@ export default function HomeScreen() {
   const familyId = family?.id;
   const now      = new Date();
 
-  const { transactions, summary, loading }  = useTransactions(now);
-  const { categories }                      = useCategories();
-  const { totalMonthlyCents }               = useFixedExpenses();
-  const { pending: materializing }          = useMaterializeFixed(now);
-  const isLoading = loading || materializing;
+  const { transactions, summary, loading: isLoading } = useTransactions(now);
+  const { categories }                               = useCategories();
+  const { totalMonthlyCents }                        = useFixedExpenses();
 
   const catMap    = Object.fromEntries(categories.map((c) => [c.id, c]));
   const recent    = transactions.slice(0, 5);
@@ -228,7 +225,7 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Últimos lançamentos</Text>
-          {!loading && recent.length > 0 && (
+          {!isLoading && recent.length > 0 && (
             <TouchableOpacity
               onPress={() => router.push('/(app)/month')}
               accessibilityRole="button"

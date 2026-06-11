@@ -1,21 +1,13 @@
 {
   "indexes": [
-
-    // ── transactions ──────────────────────────────────────────────────────────
-    // useTransactions: where(date >= start), where(date <= end), orderBy(date desc)
-    // → campo único 'date' é coberto pelo auto-index do Firestore (sem composto necessário)
-
-    // Relatório: filtro por type + janela de mês
     {
       "collectionGroup": "transactions",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "type",   "order": "ASCENDING"  },
-        { "fieldPath": "date",   "order": "DESCENDING" }
+        { "fieldPath": "type", "order": "ASCENDING"  },
+        { "fieldPath": "date", "order": "DESCENDING" }
       ]
     },
-
-    // Relatório: filtro por categoria + janela de mês
     {
       "collectionGroup": "transactions",
       "queryScope": "COLLECTION",
@@ -24,8 +16,6 @@
         { "fieldPath": "date",       "order": "DESCENDING" }
       ]
     },
-
-    // Relatório: filtro por autor + janela de mês
     {
       "collectionGroup": "transactions",
       "queryScope": "COLLECTION",
@@ -34,9 +24,6 @@
         { "fieldPath": "date",     "order": "DESCENDING" }
       ]
     },
-
-    // Cloud Function: idempotência na geração de fixedExpenses
-    // where(source == 'fixed'), where(fixedExpenseId == id), orderBy(date desc)
     {
       "collectionGroup": "transactions",
       "queryScope": "COLLECTION",
@@ -46,9 +33,6 @@
         { "fieldPath": "date",           "order": "DESCENDING" }
       ]
     },
-
-    // ── categories ────────────────────────────────────────────────────────────
-    // useCategories: orderBy('type'), orderBy('name')
     {
       "collectionGroup": "categories",
       "queryScope": "COLLECTION",
@@ -57,9 +41,6 @@
         { "fieldPath": "name", "order": "ASCENDING" }
       ]
     },
-
-    // ── fixedExpenses ─────────────────────────────────────────────────────────
-    // useFixedExpenses: where('active', '==', true), orderBy('startDate', 'asc')
     {
       "collectionGroup": "fixedExpenses",
       "queryScope": "COLLECTION",
@@ -68,7 +49,6 @@
         { "fieldPath": "startDate", "order": "ASCENDING" }
       ]
     }
-
   ],
   "fieldOverrides": []
 }

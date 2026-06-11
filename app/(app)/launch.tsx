@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, Alert, ScrollView, Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
@@ -29,7 +30,7 @@ import type { Category } from '@shared/types/category';
 // ── Skeleton de edição ────────────────────────────────────────────────────────
 function EditLoadingSkeleton() {
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.handle} />
       <View style={styles.header}>
         <SkeletonBox width={32} height={32} borderRadius={Radius.sm} />
@@ -55,7 +56,7 @@ function EditLoadingSkeleton() {
           <SkeletonBox height={48} borderRadius={Radius.md} />
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -131,12 +132,17 @@ export default function LaunchScreen() {
     setSaving(true);
     try {
       const trimmedNote = note.trim();
+      // Overlay current time on the chosen date so same-day entries sort by hour
+      const submitDate = new Date(date);
+      const now = new Date();
+      submitDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+
       if (isEditing && id) {
         await updateDoc(doc(db, 'families', familyId, 'transactions', id), {
           amountCents: cents,
           type,
           categoryId:  category.id,
-          date:        Timestamp.fromDate(date),
+          date:        Timestamp.fromDate(submitDate),
           note:        trimmedNote || deleteField(),
           updatedAt:   serverTimestamp(),
         });
@@ -146,7 +152,7 @@ export default function LaunchScreen() {
           type,
           categoryId:  category.id,
           authorId:    auth.currentUser!.uid,
-          date:        Timestamp.fromDate(date),
+          date:        Timestamp.fromDate(submitDate),
           ...(trimmedNote ? { note: trimmedNote } : {}),
           source:      'manual' as const,
           createdAt:   serverTimestamp(),
@@ -154,6 +160,11 @@ export default function LaunchScreen() {
         } as Parameters<typeof addDoc>[1]);
       }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setDigits('');
+      setNote('');
+      setCategory(null);
+      setDate(new Date());
+      setShowDatePicker(false);
       router.back();
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? 'desconhecido';
@@ -171,7 +182,7 @@ export default function LaunchScreen() {
   const accentColor   = expenseActive ? Colors.negative : Colors.positive;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.handle} />
 
       {/* ── Header ── */}
@@ -277,8 +288,7 @@ export default function LaunchScreen() {
                 mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onDateChange}
-                maximumDate={new Date()}
-                locale="pt-BR"
+locale="pt-BR"
               />
               {Platform.OS === 'ios' && (
                 <TouchableOpacity
@@ -330,7 +340,7 @@ export default function LaunchScreen() {
         </View>
 
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

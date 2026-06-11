@@ -239,10 +239,10 @@ function FixedItem({ item, catName, catIcon, catColor, total, isLast, showDivide
         <Text style={styles.icon}>{catIcon ?? '📦'}</Text>
       </View>
 
-      {/* Nome + categoria */}
+      {/* Categoria + nome */}
       <View style={styles.itemInfo}>
-        <Text style={styles.itemLabel} numberOfLines={1}>{item.label}</Text>
-        <Text style={styles.itemMeta}  numberOfLines={1}>{catName ?? 'Outros'}</Text>
+        <Text style={styles.itemLabel} numberOfLines={1}>{catName ?? 'Outros'}</Text>
+        <Text style={styles.itemMeta}  numberOfLines={1}>{item.label}</Text>
       </View>
 
       {/* Valor + barra — largura fixa, nunca comprimido */}

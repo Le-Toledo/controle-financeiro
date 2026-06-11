@@ -9,9 +9,8 @@ import { doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 import { db } from '@/lib/firebase';
 import { useAuthStore }    from '@/stores/auth.store';
-import { useTransactions }     from '@/hooks/useTransactions';
-import { useCategories }       from '@/hooks/useCategories';
-import { useMaterializeFixed } from '@/hooks/useMaterializeFixed';
+import { useTransactions } from '@/hooks/useTransactions';
+import { useCategories }   from '@/hooks/useCategories';
 import { TransactionCard } from '@/components/transaction/TransactionCard';
 import { MonthSummary }    from '@/components/transaction/MonthSummary';
 import { ScreenWrapper }   from '@/components/ui/ScreenWrapper';
@@ -99,10 +98,8 @@ export default function MonthScreen() {
   const familyId = useAuthStore((s) => s.family?.id);
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const { transactions, summary, loading }  = useTransactions(currentMonth);
-  const { categories }                      = useCategories();
-  const { pending: materializing }          = useMaterializeFixed(currentMonth);
-  const isLoading = loading || materializing;
+  const { transactions, summary, loading: isLoading } = useTransactions(currentMonth);
+  const { categories }                               = useCategories();
 
   const catMap  = Object.fromEntries(categories.map((c) => [c.id, c]));
   const grouped = groupByDay(transactions);
